@@ -170,7 +170,7 @@ namespace LuaEmuPlayer.Models
         }
 
         // Writes carefully to emulator considering the endianness
-        public void WriteToEmulator(uint ramAddr, byte[] data)
+        public void Write(uint ramAddr, byte[] data)
         {
             var offset = 0x7fffffff & ramAddr;
             if (data.Length == 1)
@@ -211,6 +211,34 @@ namespace LuaEmuPlayer.Models
             {
                 throw new ArgumentException($"Unsupported write size to {ramAddr:X} for length {data.Length}");
             }
+        }
+
+        public byte ReadByte(uint ramAddr)
+        {
+            var offset = 0x7fffffff & ramAddr;
+            var emuPtr = new IntPtr((long)(_ramPtrBase + ToBigEndianEmuOffset1(offset)));
+            return _process.ReadValue<byte>(emuPtr);
+        }
+
+        public ushort ReadUShort(uint ramAddr)
+        {
+            var offset = 0x7fffffff & ramAddr;
+            var emuPtr = new IntPtr((long)(_ramPtrBase + ToBigEndianEmuOffset2(offset)));
+            return _process.ReadValue<ushort>(emuPtr);
+        }
+
+        public uint ReadUInt(uint ramAddr)
+        {
+            var offset = 0x7fffffff & ramAddr;
+            var emuPtr = new IntPtr((long)(_ramPtrBase));
+            return _process.ReadValue<uint>(emuPtr);
+        }
+
+        public float ReadFloat(uint ramAddr)
+        {
+            var offset = 0x7fffffff & ramAddr;
+            var emuPtr = new IntPtr((long)(_ramPtrBase));
+            return _process.ReadValue<float>(emuPtr);
         }
 
         public bool Ok()

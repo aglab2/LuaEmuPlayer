@@ -23,6 +23,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
-    <PackageReference Include="LuaCSharp" Version="0.4.2" />
+    <PackageReference Include="NLua" Version="1.7.5" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Avalonia.Media.Imaging;
+using NLua;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Tmds.DBus.Protocol;
 using static LuaEmuPlayer.Models.Emulator;
 
 namespace LuaEmuPlayer.Models
@@ -11,43 +13,233 @@ namespace LuaEmuPlayer.Models
     {
         public enum State
         {
-            INITIAL,
+            LOADING,
+            SEARCHING_EMULATOR,
             ONLY_EMULATOR,
-            GAME_ACTIVE,
+            ACTIVE,
         }
 
         public delegate void EmuStateChangeDelegate(State state);
-        public EmuStateChangeDelegate EmuStateChange;
+        readonly EmuStateChangeDelegate _emuStateChange;
+
+        public delegate void ErrorDelegate(string err);
+        readonly ErrorDelegate _error;
+
+        public delegate int GetWindowInfo();
+        readonly GetWindowInfo _getWindowHeight;
+        readonly GetWindowInfo _getWindowWidth;
+
+        public struct MouseInputs
+        {
+            public bool left;
+            public int x;
+            public int y;
+        };
+        public delegate MouseInputs GetMouseInputs();
+        readonly GetMouseInputs _getMouseInputs;
 
         Emulator _emulator = new();
+        Lua _lua = new Lua();
 
-        public Player(EmuStateChangeDelegate emuStateChange)
+        // TODO: Probably should be a delegate to VM
+        bool buttonL_ = false;
+        bool buttonR_ = false;
+        bool buttonA_ = false;
+        bool buttonB_ = false;
+
+        int _frameCount = 0;
+
+        string GetRomHash()
         {
+            return "517F8FC2BF1B4D12BDD9C69A161EA1A1DFD69E61";
+        }
+
+        delegate void VoidDelegate();
+        void ConsoleClear()
+        {
+            // -
+        }
+
+        int GetFrameCount()
+        {
+            return _frameCount;
+        }
+
+        float EmuReadFloat(uint off, bool be)
+        {
+            return _emulator.ReadFloat(off);
+        }
+
+        ushort EmuReadUShortBE(uint off)
+        {
+            return _emulator.ReadUShort(off);
+        }
+
+        uint EmuReadUIntBE(uint off)
+        {
+            return _emulator.ReadUInt(off);
+        }
+
+        byte EmuReadByte(uint off)
+        {
+            return _emulator.ReadByte(off);
+        }
+
+        class CancelException : Exception
+        { }
+
+        void Cancel()
+        {
+            throw new CancelException();
+        }
+
+        Dictionary<string, bool> ReadJoyPad()
+        {
+            return new Dictionary<string, bool>()
+            {
+                { "P1 L", buttonL_ },
+                { "P1 R", buttonR_ },
+                { "P1 A", buttonA_ },
+                { "P1 B", buttonB_ },
+            };
+        }
+
+        int GetWindowWidth()
+        {
+            return _getWindowWidth();
+        }
+
+        int GetWindowHeight()
+        {
+            return _getWindowHeight();
+        }
+
+        int SetGameExtraPadding(int w, int h, int wp, int hp)
+        {
+            return 0;
+        }
+
+        LuaTable GetMouse()
+        {
+            var inputs = _getMouseInputs();
+            var mouse = _lua.GetTable("__mouse__");
+            mouse["Left"] = inputs.left;
+            mouse["X"] = inputs.x;
+            mouse["Y"] = inputs.y;
+
+            return mouse;
+        }
+
+        int DrawImage(string path, int x, int y, int width, int height)
+        {
+            return 0;
+        }
+
+        LuaFunction openIronMario()
+        {
+            _lua.NewTable("gameinfo");
+            _lua["gameinfo.getromhash"] = new Func<string>(GetRomHash);
+
+            _lua.NewTable("console");
+            _lua["console.clear"] = (VoidDelegate) ConsoleClear;
+
+            _lua.NewTable("emu");
+            _lua["emu.framecount"] = new Func<int>(GetFrameCount);
+            _lua["emu.frameadvance"] = (VoidDelegate)Cancel;
+
+            _lua.NewTable("memory");
+            _lua["memory.readfloat"] = new Func<uint, bool, float>(EmuReadFloat);
+            _lua["memory.read_u16_be"] = new Func<uint, ushort>(EmuReadUShortBE);
+            _lua["memory.read_u32_be"] = new Func<uint, uint>(EmuReadUIntBE);
+            _lua["memory.readbyte"] = new Func<uint, byte>(EmuReadByte);
+
+            _lua.NewTable("joypad");
+            _lua["joypad.get"] = new Func<Dictionary<string, bool>>(ReadJoyPad);
+
+            _lua.NewTable("client");
+            _lua["client.bufferwidth"] = new Func<int>(GetWindowWidth);
+            _lua["client.bufferheight"] = new Func<int>(GetWindowHeight);
+            _lua["client.SetGameExtraPadding"] = new Func<int, int, int, int, int>(SetGameExtraPadding);
+
+            _lua.NewTable("__mouse__");
+            _lua.NewTable("input");
+            _lua["input.getmouse"] = new Func<LuaTable>(GetMouse);
+
+            _lua.NewTable("gui");
+            _lua["gui.drawImage"] = new Func<string, int, int, int, int, int>(DrawImage);
+
+            return _lua.LoadFile("D:\\git\\LuaEmuPlayer\\bin\\Debug\\net6.0\\IronMarioTracker.lua");
+        }
+
+        public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs)
+        {
+            _emuStateChange = emuStateChange;
+            _error = error;
+            _getWindowHeight = height;
+            _getWindowWidth = width;
+            _getMouseInputs = getMouseInputs;
+
             Task.Run(Scan);
-            EmuStateChange = emuStateChange;
         }
 
         async Task Scan()
         {
-            EmuStateChange(State.INITIAL);
+            _emuStateChange(State.LOADING);
+            LuaFunction ironMario;
+            try
+            {
+                ironMario = openIronMario();
+            }
+            catch (Exception e)
+            {
+                int a = 0;
+                _error(e.Message);
+                return;
+            }
+            _emuStateChange(State.SEARCHING_EMULATOR);
+            PrepareResult prevResult = PrepareResult.NOT_FOUND;
 
             int delayMs = 1000;
             while (true)
             {
+                _frameCount++;
                 try
                 {
                     delayMs = 1000;
-                    switch (_emulator.Prepare())
+                    PrepareResult newResult = _emulator.Prepare();
+                    if (newResult != prevResult)
                     {
-                        case PrepareResult.NOT_FOUND:
-                            break;
-                        case PrepareResult.ONLY_EMULATOR:
-                            EmuStateChange(State.ONLY_EMULATOR);
-                            break;
-                        case PrepareResult.OK:
-                            EmuStateChange(State.GAME_ACTIVE);
-                            break;
+                        prevResult = newResult;
+                        switch (_emulator.Prepare())
+                        {
+                            case PrepareResult.NOT_FOUND:
+                                _emuStateChange(State.SEARCHING_EMULATOR);
+                                break;
+                            case PrepareResult.ONLY_EMULATOR:
+                                _emuStateChange(State.ONLY_EMULATOR);
+                                break;
+                            case PrepareResult.OK:
+                                _emuStateChange(State.ACTIVE);
+                                break;
+                        }
                     }
+
+                    if (newResult != PrepareResult.OK)
+                        continue;
+
+                    delayMs = 60;
+                    try
+                    {
+                        using (var bitmap = new RenderTargetBitmap(100, 1))
+                        {
+                            ironMario.Call();
+                        }
+                    }
+                    catch (CancelException) { }
+                }
+                catch (Exception e)
+                {
+                    _error(e.Message);
                 }
                 finally
                 {
