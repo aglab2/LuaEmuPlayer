@@ -138,12 +138,12 @@ namespace LuaEmuPlayer.Models
 
         int GetWindowWidth()
         {
-            return _getWindowWidth() - 200;
+            return _gui.Height * 4 / 3;
         }
 
         int GetWindowHeight()
         {
-            return _getWindowHeight();
+            return _gui.Height;
         }
 
         int SetGameExtraPadding(int w, int h, int wp, int hp)
@@ -247,6 +247,7 @@ namespace LuaEmuPlayer.Models
             while (true)
             {
                 _frameCount++;
+                var residue = _gui.CheckHeight(_getWindowHeight(), _getWindowWidth());
                 try
                 {
                     delayMs = 1000;
@@ -287,9 +288,13 @@ namespace LuaEmuPlayer.Models
                 finally
                 {
                     var present = _gui.SwapBuffers();
-                    if (present is not null)
+                    if (present is not null || residue is not null)
                     {
                         _present(present);
+                    }
+                    if (residue is not null)
+                    {
+                        residue.Dispose();
                     }
                     await Task.Delay(delayMs);
                 }

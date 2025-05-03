@@ -23,6 +23,9 @@ namespace LuaEmuPlayer.Models
         Dictionary<string, SKTypeface> _skiaTypeFaces = new();
         Dictionary<Tuple<string, int>, SKFont> _skiaFonts = new();
 
+        public int Width { get => _skiaImageInfo.Width; }
+        public int Height { get => _skiaImageInfo.Height; }
+
         public WriteableBitmap SwapBuffers()
         {
             if (!StopRender())
@@ -32,7 +35,7 @@ namespace LuaEmuPlayer.Models
 
             WriteableBitmap present = _back;
             _back = _front;
-            _front = _back;
+            _front = present;
             return present;
         }
 
@@ -177,7 +180,7 @@ namespace LuaEmuPlayer.Models
             var font = LoadFont(fontFamily, fontSize ?? 16);
             using (var paint = new SKPaint())
             {
-                var align = ToSKTextAlign(vertAlign);
+                var align = ToSKTextAlign(horizAlign);
                 if (align.HasValue)
                 {
                     paint.TextAlign = align.Value;
@@ -196,6 +199,31 @@ namespace LuaEmuPlayer.Models
                 _skiaCanvas.DrawText(message, x, y, font, paint);
             }
             return 0;
+        }
+
+        public class Residue
+        {
+            public WriteableBitmap back;
+            public WriteableBitmap front;
+            
+            public void Dispose()
+            {
+                back.Dispose();
+                front.Dispose();
+            }
+        }
+
+        public Residue CheckHeight(int h, int w)
+        {
+            if (h == Height && w == Width)
+                return null;
+
+            var residue = new Residue() { back = _back, front = _front };
+            _back = new(new Avalonia.PixelSize(w, h), new Avalonia.Vector(96, 96));
+            _front = new(new Avalonia.PixelSize(w, h), new Avalonia.Vector(96, 96));
+            _skiaImageInfo = new(w, h);
+
+            return residue;
         }
     }
 }
