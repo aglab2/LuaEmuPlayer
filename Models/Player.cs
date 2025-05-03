@@ -1,14 +1,39 @@
 ﻿using Avalonia.Media.Imaging;
 using NLua;
+using NLua.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Tmds.DBus.Protocol;
 using static LuaEmuPlayer.Models.Emulator;
+using static LuaEmuPlayer.Models.Player;
 
 namespace LuaEmuPlayer.Models
 {
+    static class Extensions
+    {
+        public static void Resume(this LuaThread thr)
+        {
+            // We leave nothing on the stack if we error
+            var oldMainTop = thr.State.MainThread.GetTop();
+            var oldCoTop = thr.State.GetTop();
+
+            var ret = thr.State.Resume(null, 0);
+            if (ret is KeraLua.LuaStatus.OK or KeraLua.LuaStatus.Yield)
+            {
+                return;
+            }
+
+            var type = thr.State.Type(-1);
+            var coErr = thr.State.ToString(-1);
+            thr.State.SetTop(oldCoTop);
+            thr.State.MainThread.SetTop(oldMainTop);
+
+            throw new LuaScriptException(coErr, string.Empty);
+        }
+    }
+
     internal class Player
     {
         public enum State
@@ -38,8 +63,9 @@ namespace LuaEmuPlayer.Models
         public delegate MouseInputs GetMouseInputs();
         readonly GetMouseInputs _getMouseInputs;
 
-        Emulator _emulator = new();
-        Lua _lua = new Lua();
+        readonly Emulator _emulator = new();
+        Lua _lua;
+        LuaThread _ironMarioThread;
 
         // TODO: Probably should be a delegate to VM
         bool buttonL_ = false;
@@ -90,7 +116,7 @@ namespace LuaEmuPlayer.Models
 
         void Cancel()
         {
-            throw new CancelException();
+            _ironMarioThread.State.Yield(0);
         }
 
         Dictionary<string, bool> ReadJoyPad()
@@ -137,6 +163,7 @@ namespace LuaEmuPlayer.Models
 
         LuaFunction openIronMario()
         {
+            _lua = new Lua();
             _lua.NewTable("gameinfo");
             _lua["gameinfo.getromhash"] = new Func<string>(GetRomHash);
 
@@ -196,6 +223,8 @@ namespace LuaEmuPlayer.Models
                 _error(e.Message);
                 return;
             }
+            _lua.NewThread(ironMario, out _ironMarioThread);
+
             _emuStateChange(State.SEARCHING_EMULATOR);
             PrepareResult prevResult = PrepareResult.NOT_FOUND;
 
@@ -228,14 +257,13 @@ namespace LuaEmuPlayer.Models
                         continue;
 
                     delayMs = 60;
-                    try
-                    {
-                        using (var bitmap = new RenderTargetBitmap(100, 1))
-                        {
-                            ironMario.Call();
-                        }
-                    }
-                    catch (CancelException) { }
+                    _ironMarioThread.Resume();
+                }
+                catch (LuaException luaEx)
+                {
+                    _ironMarioThread.Dispose();
+                    _lua.NewThread(ironMario, out _ironMarioThread);
+                    _error(luaEx.Message);
                 }
                 catch (Exception e)
                 {
