@@ -197,7 +197,7 @@ namespace LuaEmuPlayer.Models
                     paint.Color = new SKColor(0xff, 0xff, 0xff);
                 }
 
-                _skiaCanvas.DrawText(message, x, y + fontSize / 2, font, paint);
+                _skiaCanvas.DrawText(message, x, y + fontSize, font, paint);
             }
             return 0;
         }

@@ -11,7 +11,8 @@
 		Width="{Binding Width, Mode=TwoWay}"
 		Height="{Binding Height, Mode=TwoWay}"
 		PointerPressed="PointerPressedHandler"
-		PointerReleased="PointerReleasedHandler">
+		PointerReleased="PointerReleasedHandler"
+		RequestedThemeVariant="Dark">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
