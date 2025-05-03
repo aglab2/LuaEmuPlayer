@@ -4,6 +4,7 @@ using NLua.Exceptions;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Tmds.DBus.Protocol;
@@ -164,13 +165,13 @@ namespace LuaEmuPlayer.Models
 
         int DrawImage(string path, int x, int y, int width, int height)
         {
-            _gui.DrawImage(path, x, y, width, height);
+            _gui.DrawImage(path, x - GetWindowWidth(), y, width, height);
             return 0;
         }
 
         int DrawString(int x, int y, string message, string foreColor = null, string backColor = null, int? fontSize = null, string fontFamily = null, string fontStyle = null, string horizAlign = null, string vertAlign = null)
         {
-            _gui.DrawString(x, y, message, foreColor, backColor, fontSize, fontFamily, fontStyle, horizAlign, vertAlign);
+            _gui.DrawString(x - GetWindowWidth(), y, message, foreColor, backColor, fontSize, fontFamily, fontStyle, horizAlign, vertAlign);
             return 0;
         }
 
@@ -209,7 +210,7 @@ namespace LuaEmuPlayer.Models
             _lua["gui.drawImage"] = new Func<string, int, int, int, int, int>(DrawImage);
             _lua["gui.drawString"] = new Func<int, int, string, string, string, int?, string, string, string, string, int>(DrawString);
 
-            return _lua.LoadFile("D:\\git\\LuaEmuPlayer\\bin\\Debug\\net6.0\\IronMarioTracker.lua");
+            return _lua.LoadFile("IronMarioTracker.lua");
         }
 
         public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs, PresentDelegate present)
@@ -226,6 +227,8 @@ namespace LuaEmuPlayer.Models
 
         async Task Scan()
         {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
             _emuStateChange(State.LOADING);
             LuaFunction ironMario;
             try

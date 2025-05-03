@@ -230,14 +230,14 @@ namespace LuaEmuPlayer.Models
         public uint ReadUInt(uint ramAddr)
         {
             var offset = 0x7fffffff & ramAddr;
-            var emuPtr = new IntPtr((long)(_ramPtrBase));
+            var emuPtr = new IntPtr((long)(_ramPtrBase + offset));
             return _process.ReadValue<uint>(emuPtr);
         }
 
         public float ReadFloat(uint ramAddr)
         {
             var offset = 0x7fffffff & ramAddr;
-            var emuPtr = new IntPtr((long)(_ramPtrBase));
+            var emuPtr = new IntPtr((long)(_ramPtrBase + offset));
             return _process.ReadValue<float>(emuPtr);
         }
 

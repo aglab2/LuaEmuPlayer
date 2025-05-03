@@ -174,10 +174,11 @@ namespace LuaEmuPlayer.Models
             return null;
         }
 
-        public int DrawString(int x, int y, string message, string foreColor, string backColor, int? fontSize, string fontFamily, string fontStyle, string horizAlign, string vertAlign)
+        public int DrawString(int x, int y, string message, string foreColor, string backColor, int? fontSizez, string fontFamily, string fontStyle, string horizAlign, string vertAlign)
         {
             StartRender();
-            var font = LoadFont(fontFamily, fontSize ?? 16);
+            int fontSize = fontSizez ?? 16;
+            var font = LoadFont(fontFamily, fontSize);
             using (var paint = new SKPaint())
             {
                 var align = ToSKTextAlign(horizAlign);
@@ -196,7 +197,7 @@ namespace LuaEmuPlayer.Models
                     paint.Color = new SKColor(0xff, 0xff, 0xff);
                 }
 
-                _skiaCanvas.DrawText(message, x, y, font, paint);
+                _skiaCanvas.DrawText(message, x, y + fontSize / 2, font, paint);
             }
             return 0;
         }

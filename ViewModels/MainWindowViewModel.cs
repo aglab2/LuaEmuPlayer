@@ -29,7 +29,7 @@ namespace LuaEmuPlayer.ViewModels
             }
         }
 
-        private int _width = 800;
+        private int _width = 300;
         public int Width
         {
             get { return _width; }
@@ -44,7 +44,7 @@ namespace LuaEmuPlayer.ViewModels
         }
 
 
-        private int _height = 450;
+        private int _height = 700;
         public int Height
         {
             get { return _height; }
