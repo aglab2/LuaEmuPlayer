@@ -161,6 +161,11 @@ namespace LuaEmuPlayer.Models
             return 0;
         }
 
+        int DrawString(int x, int y, string message, string foreColor = null, string backColor = null, int? fontSize = null, string fontFamily = null, string fontStyle = null, string horizAlign = null, string vertAlign = null)
+        {
+            return 0;
+        }
+
         LuaFunction openIronMario()
         {
             _lua = new Lua();
@@ -194,6 +199,7 @@ namespace LuaEmuPlayer.Models
 
             _lua.NewTable("gui");
             _lua["gui.drawImage"] = new Func<string, int, int, int, int, int>(DrawImage);
+            _lua["gui.drawString"] = new Func<int, int, string, string, string, int?, string, string, string, string, int>(DrawString);
 
             return _lua.LoadFile("D:\\git\\LuaEmuPlayer\\bin\\Debug\\net6.0\\IronMarioTracker.lua");
         }
