@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Tmds.DBus.Protocol;
 using static LuaEmuPlayer.Models.Emulator;
@@ -178,6 +179,7 @@ namespace LuaEmuPlayer.Models
         LuaFunction openIronMario()
         {
             _lua = new Lua();
+            _lua.State.Encoding = Encoding.UTF8;
             _lua.NewTable("gameinfo");
             _lua["gameinfo.getromhash"] = new Func<string>(GetRomHash);
 
