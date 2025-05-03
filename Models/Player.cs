@@ -1,6 +1,7 @@
 ﻿using Avalonia.Media.Imaging;
 using NLua;
 using NLua.Exceptions;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -54,6 +55,9 @@ namespace LuaEmuPlayer.Models
         readonly GetWindowInfo _getWindowHeight;
         readonly GetWindowInfo _getWindowWidth;
 
+        public delegate void PresentDelegate(WriteableBitmap bitmap);
+        readonly PresentDelegate _present;
+
         public struct MouseInputs
         {
             public bool left;
@@ -64,6 +68,8 @@ namespace LuaEmuPlayer.Models
         readonly GetMouseInputs _getMouseInputs;
 
         readonly Emulator _emulator = new();
+        readonly GUI _gui = new();
+
         Lua _lua;
         LuaThread _ironMarioThread;
 
@@ -132,7 +138,7 @@ namespace LuaEmuPlayer.Models
 
         int GetWindowWidth()
         {
-            return _getWindowWidth();
+            return _getWindowWidth() - 200;
         }
 
         int GetWindowHeight()
@@ -158,11 +164,13 @@ namespace LuaEmuPlayer.Models
 
         int DrawImage(string path, int x, int y, int width, int height)
         {
+            _gui.DrawImage(path, x, y, width, height);
             return 0;
         }
 
         int DrawString(int x, int y, string message, string foreColor = null, string backColor = null, int? fontSize = null, string fontFamily = null, string fontStyle = null, string horizAlign = null, string vertAlign = null)
         {
+            _gui.DrawString(x, y, message, foreColor, backColor, fontSize, fontFamily, fontStyle, horizAlign, vertAlign);
             return 0;
         }
 
@@ -204,13 +212,14 @@ namespace LuaEmuPlayer.Models
             return _lua.LoadFile("D:\\git\\LuaEmuPlayer\\bin\\Debug\\net6.0\\IronMarioTracker.lua");
         }
 
-        public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs)
+        public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs, PresentDelegate present)
         {
             _emuStateChange = emuStateChange;
             _error = error;
             _getWindowHeight = height;
             _getWindowWidth = width;
             _getMouseInputs = getMouseInputs;
+            _present = present;
 
             Task.Run(Scan);
         }
@@ -277,6 +286,11 @@ namespace LuaEmuPlayer.Models
                 }
                 finally
                 {
+                    var present = _gui.SwapBuffers();
+                    if (present is not null)
+                    {
+                        _present(present);
+                    }
                     await Task.Delay(delayMs);
                 }
             }

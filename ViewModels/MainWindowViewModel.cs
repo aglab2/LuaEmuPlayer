@@ -90,7 +90,7 @@ namespace LuaEmuPlayer.ViewModels
 
         public MainWindowViewModel()
         {
-            _player = new(OnEmuStateChange, OnError, OnGetWindowWidth, OnGetWindowHeight, OnGetMouseInputs);
+            _player = new(OnEmuStateChange, OnError, OnGetWindowWidth, OnGetWindowHeight, OnGetMouseInputs, OnPresent);
         }
 
         void OnEmuStateChange(Player.State state)
@@ -145,6 +145,14 @@ namespace LuaEmuPlayer.ViewModels
         Player.MouseInputs OnGetMouseInputs()
         {
             return new Player.MouseInputs() { left = _mouse.left, x = _mouse.x, y = _mouse.y };
+        }
+
+        void OnPresent(WriteableBitmap bitmap)
+        {
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                Render = bitmap;
+            });
         }
     }
 }
