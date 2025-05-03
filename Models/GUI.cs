@@ -1,11 +1,8 @@
-﻿using Avalonia.Controls;
-using Avalonia.Media.Imaging;
+﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using HarfBuzzSharp;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace LuaEmuPlayer.Models
 {

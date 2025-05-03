@@ -1,16 +1,12 @@
 ﻿using Avalonia.Media.Imaging;
 using NLua;
 using NLua.Exceptions;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Tmds.DBus.Protocol;
 using static LuaEmuPlayer.Models.Emulator;
-using static LuaEmuPlayer.Models.Player;
 
 namespace LuaEmuPlayer.Models
 {
