@@ -118,9 +118,6 @@ namespace LuaEmuPlayer.Models
             return _emulator.ReadByte(off);
         }
 
-        class CancelException : Exception
-        { }
-
         void Cancel()
         {
             _ironMarioThread.State.Yield(0);
@@ -175,6 +172,46 @@ namespace LuaEmuPlayer.Models
             return 0;
         }
 
+        long NewForm(int width, int heigh, string title, LuaFunction onClose)
+        {
+            return 0;
+        }
+
+        bool FormDestroy(long handle)
+        {
+            return true;
+        }
+
+        string FormGetProperty(long handle, string name)
+        {
+            return "";
+        }
+
+        void FormSetProperty(long handle, string name, object value)
+        {
+            var a = 0;
+        }
+
+        long FormLabel(long handle, string caption, int x, int y, int width, int height)
+        {
+            return 0;
+        }
+
+        long FormDropdown(long handle, LuaTable items, int x, int y, int width, int height)
+        {
+            return 0;
+        }
+
+        long FormCheckbox(long handle, string caption, int x, int y)
+        {
+            return 0;
+        }
+
+        long FormButton(long handle, string caption, LuaFunction onClick, int x, int y, int width, int height)
+        {
+            return 0;
+        }
+
         LuaFunction openIronMario()
         {
             var ironMarioScript = File.ReadAllLines("IronMarioTracker.lua");
@@ -221,6 +258,16 @@ namespace LuaEmuPlayer.Models
             _lua.NewTable("gui");
             _lua["gui.drawImage"] = new Func<string, int, int, int, int, int>(DrawImage);
             _lua["gui.drawString"] = new Func<int, int, string, string, string, int?, string, string, string, string, int>(DrawString);
+
+            _lua.NewTable("forms");
+            _lua["forms.newform"] = new Func<int, int, string, LuaFunction, long>(NewForm);
+            _lua["forms.destroy"] = new Func<long, bool>(FormDestroy);
+            _lua["forms.getproperty"] = new Func<long, string, string>(FormGetProperty);
+            _lua["forms.setproperty"] = new Action<long, string, object>(FormSetProperty);
+            _lua["forms.label"] = new Func<long, string, int, int, int, int, long>(FormLabel);
+            _lua["forms.dropdown"] = new Func<long, LuaTable, int, int, int, int, long>(FormDropdown);
+            _lua["forms.checkbox"] = new Func<long, string, int, int, long>(FormCheckbox);
+            _lua["forms.button"] = new Func<long, string, LuaFunction, int, int, int, int, long>(FormButton);
 
             return _lua.LoadFile("IronMarioTracker.lua");
         }
