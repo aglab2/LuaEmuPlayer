@@ -157,7 +157,7 @@ namespace LuaEmuPlayer.Models
             var inputs = _getMouseInputs();
             var mouse = _lua.GetTable("__mouse__");
             mouse["Left"] = inputs.left;
-            mouse["X"] = inputs.x;
+            mouse["X"] = inputs.x + GetWindowWidth();
             mouse["Y"] = inputs.y;
 
             return mouse;

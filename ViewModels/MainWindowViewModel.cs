@@ -83,7 +83,7 @@ namespace LuaEmuPlayer.ViewModels
         public void PointerHandler(double x, double y, bool left, bool right)
         {
             _mouse.x = (int)x;
-            _mouse.x = (int)y;
+            _mouse.y = (int)y;
             _mouse.left = left;
             _mouse.right = right;
         }
