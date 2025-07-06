@@ -1,4 +1,5 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Avalonia.Controls.Shapes;
+using Avalonia.Media.Imaging;
 using NLua;
 using NLua.Exceptions;
 using System;
@@ -79,9 +80,11 @@ namespace LuaEmuPlayer.Models
 
         int _frameCount = 0;
 
+        string _hash = "";
+
         string GetRomHash()
         {
-            return "517F8FC2BF1B4D12BDD9C69A161EA1A1DFD69E61";
+            return _hash;
         }
 
         delegate void VoidDelegate();
@@ -174,6 +177,17 @@ namespace LuaEmuPlayer.Models
 
         LuaFunction openIronMario()
         {
+            var ironMarioScript = File.ReadAllLines("IronMarioTracker.lua");
+            foreach (var line in ironMarioScript)
+            {
+                if (line.Contains("ROM_HASH"))
+                {
+                    var split = line.Split('"');
+                    if (split.Length > 2)
+                        _hash = split[1];
+                }
+            }
+
             _lua = new Lua();
             _lua.State.Encoding = Encoding.UTF8;
             _lua.NewTable("gameinfo");
