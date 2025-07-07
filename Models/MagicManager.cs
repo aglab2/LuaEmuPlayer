@@ -163,7 +163,7 @@ namespace LuaEmuPlayer.Models
 
                     if (parallelStart != 0 && regionSize >= 0x800000)
                     {
-                        ScanForRAM(address, (ulong)m.RegionSize, 0x4000000, ref isRamFound, ref ramPtrBase);
+                        ScanForRAM(address, (ulong)m.RegionSize, 0x10000, ref isRamFound, ref ramPtrBase);
                     }
 
                     // Modern mupen allocates a gigantic array with very strict alignment
@@ -202,6 +202,7 @@ namespace LuaEmuPlayer.Models
 
             if (!isRomFound || !isRamFound)
                 throw new ArgumentException("Failed to find rom and ram!");
+
         }
 
         bool IsRamBaseValid()
