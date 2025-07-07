@@ -1,13 +1,16 @@
-﻿using Avalonia.Controls.Shapes;
+﻿using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using NLua;
 using NLua.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static LuaEmuPlayer.Models.Emulator;
+using static LuaEmuPlayer.Models.Form;
 
 namespace LuaEmuPlayer.Models
 {
@@ -172,44 +175,166 @@ namespace LuaEmuPlayer.Models
             return 0;
         }
 
-        long NewForm(int width, int heigh, string title, LuaFunction onClose)
+        class ControlsRegistrar
         {
-            return 0;
+            Dictionary<long, Control> _controls = new();
+
+            public long Register(Control control)
+            {
+                return Dispatcher.UIThread.Invoke(() =>
+                {
+                    long id = (long)control.Tag;
+                    _controls[id] = control;
+                    control.Unloaded += (_, _) => Unregister(id);
+                    return id;
+                });
+            }
+
+            void Unregister(long handle)
+            {
+                _controls.Remove(handle);
+            }
+
+            public Control Get(long handle)
+            {
+                return Dispatcher.UIThread.Invoke(() =>
+                {
+                    if (!_controls.TryGetValue(handle, out Control control))
+                    {
+                        return null;
+                    }
+                    return control;
+                });
+            }
+        };
+        readonly ControlsRegistrar _formControls = new();
+
+        long NewForm(int width, int height, string title, LuaFunction onClose)
+        {
+            Form form = Dispatcher.UIThread.Invoke(() =>
+            {
+                Form form = new(height, height, title, () => onClose.Call());
+                form.Show();
+                return form;
+            });
+
+            return _formControls.Register(form);
         }
 
         bool FormDestroy(long handle)
         {
+            var form = _formControls.Get(handle) as Form;
+            if (form is null)
+            {
+                return false;
+            }
+
+            Dispatcher.UIThread.InvokeAsync(() => form.Close());
             return true;
         }
 
         string FormGetProperty(long handle, string name)
         {
-            return "";
+            var control = _formControls.Get(handle);
+            if (control is null)
+            {
+                return null;
+            }
+
+            switch (name)
+            {
+                case "Height":
+                    return Dispatcher.UIThread.Invoke(() => control.Height).ToString();
+                case "Width":
+                    return Dispatcher.UIThread.Invoke(() => control.Width).ToString();
+                case "SelectedItem":
+                    if (control is ComboBox dropdown)
+                    {
+                        return Dispatcher.UIThread.Invoke(() => dropdown.SelectedItem).ToString();
+                    }
+                    break;
+            }
+
+            return null;
         }
 
         void FormSetProperty(long handle, string name, object value)
         {
-            var a = 0;
+            var control = _formControls.Get(handle);
+            if (control is null)
+            {
+                return;
+            }
+
+            switch(name)
+            {
+                case "Checked":
+                    var checkbox = control as CheckBox;
+                    if (checkbox is not null)
+                    {
+                        Dispatcher.UIThread.Invoke(() => checkbox.IsChecked = (bool)value).ToString();
+                    }
+                    break;
+                case "SelectedItem":;
+                    if (control is ComboBox dropdown)
+                    {
+                        Dispatcher.UIThread.Invoke(() => dropdown.SelectedItem = value).ToString();
+                    }
+                    break;
+            }
         }
 
         long FormLabel(long handle, string caption, int x, int y, int width, int height)
         {
-            return 0;
+            var form = _formControls.Get(handle) as Form;
+            return Dispatcher.UIThread.Invoke(() =>
+            {
+                return _formControls.Register(form.AddLabel(x, y, width, height, caption));
+            });
         }
 
         long FormDropdown(long handle, LuaTable items, int x, int y, int width, int height)
         {
-            return 0;
+            var form = _formControls.Get(handle) as Form;
+            List<string> dropdownItems = new List<string>();
+            int i = 0;
+            while (true)
+            {
+                i++;
+                var item = items[i];
+                if (item is null)
+                {
+                    break;
+                }
+
+                if (item is string str)
+                {
+                    dropdownItems.Add(str);
+                }
+            }
+
+            return Dispatcher.UIThread.Invoke(() =>
+            {
+                return _formControls.Register(form.AddCombobox(x, y, dropdownItems));
+            });
         }
 
         long FormCheckbox(long handle, string caption, int x, int y)
         {
-            return 0;
+            var form = _formControls.Get(handle) as Form;
+            return Dispatcher.UIThread.Invoke(() =>
+            {
+                return _formControls.Register(form.AddCheckbox(x, y, caption));
+            });
         }
 
         long FormButton(long handle, string caption, LuaFunction onClick, int x, int y, int width, int height)
         {
-            return 0;
+            var form = _formControls.Get(handle) as Form;
+            return Dispatcher.UIThread.Invoke(() =>
+            {
+                return _formControls.Register(form.AddButton(x, y, width, height, caption, () => onClick.Call()));
+            });
         }
 
         LuaFunction openIronMario()
@@ -296,7 +421,6 @@ namespace LuaEmuPlayer.Models
             }
             catch (Exception e)
             {
-                int a = 0;
                 _error(e.Message);
                 return;
             }
