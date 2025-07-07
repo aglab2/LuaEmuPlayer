@@ -215,7 +215,7 @@ namespace LuaEmuPlayer.Models
         {
             Form form = Dispatcher.UIThread.Invoke(() =>
             {
-                Form form = new(height, height, title, async () => await RunUIBlock(onClose));
+                Form form = new(width, height, title, async () => await RunUIBlock(onClose));
                 form.Show();
                 return form;
             });
