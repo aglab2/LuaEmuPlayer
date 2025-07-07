@@ -1,17 +1,13 @@
-﻿using Avalonia.Controls;
-using Avalonia.Media.Imaging;
-using Avalonia.Threading;
+﻿using Avalonia.Media.Imaging;
 using NLua;
 using NLua.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static LuaEmuPlayer.Models.Emulator;
-using static LuaEmuPlayer.Models.Form;
 
 namespace LuaEmuPlayer.Models
 {
@@ -72,6 +68,7 @@ namespace LuaEmuPlayer.Models
 
         readonly Emulator _emulator = new();
         readonly GUI _gui = new();
+        readonly Forms _forms = new();
 
         SemaphoreSlim _semaphore = new(1, 1);
         Lua _lua;
@@ -177,132 +174,33 @@ namespace LuaEmuPlayer.Models
             return 0;
         }
 
-        class ControlsRegistrar
-        {
-            Dictionary<long, Control> _controls = new();
-
-            public long Register(Control control)
-            {
-                return Dispatcher.UIThread.Invoke(() =>
-                {
-                    long id = (long)control.Tag;
-                    _controls[id] = control;
-                    control.Unloaded += (_, _) => Unregister(id);
-                    return id;
-                });
-            }
-
-            void Unregister(long handle)
-            {
-                _controls.Remove(handle);
-            }
-
-            public Control Get(long handle)
-            {
-                return Dispatcher.UIThread.Invoke(() =>
-                {
-                    if (!_controls.TryGetValue(handle, out Control control))
-                    {
-                        return null;
-                    }
-                    return control;
-                });
-            }
-        };
-        readonly ControlsRegistrar _formControls = new();
-
         long NewForm(int width, int height, string title, LuaFunction onClose)
         {
-            Form form = Dispatcher.UIThread.Invoke(() =>
-            {
-                Form form = new(width, height, title, async () => await RunUIBlock(onClose));
-                form.Show();
-                return form;
-            });
-
-            return _formControls.Register(form);
+            return _forms.Form(width, height, title, async () => await RunUIBlock(onClose));
         }
 
         bool FormDestroy(long? handle)
         {
-            if (handle is null)
-            {
-                return false;
-            }
-
-            var form = _formControls.Get(handle.Value) as Form;
-            if (form is null)
-            {
-                return false;
-            }
-
-            Dispatcher.UIThread.Invoke(() => form.Close());
-            return true;
+            return _forms.Destroy(handle);
         }
 
         string FormGetProperty(long handle, string name)
         {
-            var control = _formControls.Get(handle);
-            if (control is null)
-            {
-                return null;
-            }
-
-            switch (name)
-            {
-                case "Height":
-                    return Dispatcher.UIThread.Invoke(() => control.Height).ToString();
-                case "Width":
-                    return Dispatcher.UIThread.Invoke(() => control.Width).ToString();
-                case "SelectedItem":
-                    if (control is ComboBox dropdown)
-                    {
-                        return Dispatcher.UIThread.Invoke(() => dropdown.SelectedItem).ToString();
-                    }
-                    break;
-            }
-
-            return null;
+            return _forms.GetProperty(handle, name);
         }
 
         void FormSetProperty(long handle, string name, object value)
         {
-            var control = _formControls.Get(handle);
-            if (control is null)
-            {
-                return;
-            }
-
-            switch(name)
-            {
-                case "Checked":
-                    var checkbox = control as CheckBox;
-                    if (checkbox is not null)
-                    {
-                        Dispatcher.UIThread.Invoke(() => checkbox.IsChecked = (bool)value).ToString();
-                    }
-                    break;
-                case "SelectedItem":
-                    if (control is ComboBox dropdown)
-                    {
-                        Dispatcher.UIThread.Invoke(() => dropdown.SelectedItem = value).ToString();
-                    }
-                    break;
-            }
+            _forms.SetProperty(handle, name, value);
         }
 
         long FormLabel(long handle, string caption, int x, int y, int width, int height)
         {
-            var form = _formControls.Get(handle) as Form;
-            return Dispatcher.UIThread.Invoke(() =>
-            {
-                return _formControls.Register(form.AddLabel(x, y, width, height, caption));
-            });
+            return _forms.Label(handle, caption, x, y, width, height);
         }
 
         long FormDropdown(long handle, LuaTable items, int x, int y, int width, int height)
         {
-            var form = _formControls.Get(handle) as Form;
             List<string> dropdownItems = new List<string>();
             int i = 0;
             while (true)
@@ -320,40 +218,22 @@ namespace LuaEmuPlayer.Models
                 }
             }
 
-            return Dispatcher.UIThread.Invoke(() =>
-            {
-                return _formControls.Register(form.AddCombobox(x, y, dropdownItems));
-            });
+            return _forms.Dropdown(handle, dropdownItems, x, y, width, height);
         }
 
         long FormCheckbox(long handle, string caption, int x, int y)
         {
-            var form = _formControls.Get(handle) as Form;
-            return Dispatcher.UIThread.Invoke(() =>
-            {
-                return _formControls.Register(form.AddCheckbox(x, y, caption));
-            });
+            return _forms.Checkbox(handle, caption, x, y);
         }
 
         long FormButton(long handle, string caption, LuaFunction onClick, int x, int y, int width, int height)
         {
-            var form = _formControls.Get(handle) as Form;
-            return Dispatcher.UIThread.Invoke(() =>
-            {
-                return _formControls.Register(form.AddButton(x, y, width, height, caption, async () => await RunUIBlock(onClick)));
-            });
+            return _forms.Button(handle, caption, async () => await RunUIBlock(onClick), x, y, width, height);
         }
 
         bool FormIsChecked(long handle)
         {
-            var checkbox = _formControls.Get(handle) as CheckBox;
-            if (checkbox is null)
-            {
-                return false;
-            }
-
-            bool result = Dispatcher.UIThread.Invoke(() => checkbox.IsChecked ?? false);
-            return result;
+            return _forms.IsChecked(handle);
         }
 
         LuaFunction openIronMario()
