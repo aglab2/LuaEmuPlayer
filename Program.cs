@@ -17,6 +17,10 @@ namespace LuaEmuPlayer
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .WithInterFont()
-                .LogToTrace();
+                .LogToTrace()
+                .With(new Win32PlatformOptions
+                {
+                    CompositionMode = new[] { Win32CompositionMode.RedirectionSurface }
+                });
     }
 }
