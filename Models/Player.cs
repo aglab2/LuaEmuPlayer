@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static LuaEmuPlayer.Models.Emulator;
 using static LuaEmuPlayer.Models.Form;
@@ -72,6 +73,7 @@ namespace LuaEmuPlayer.Models
         readonly Emulator _emulator = new();
         readonly GUI _gui = new();
 
+        SemaphoreSlim _semaphore = new(1, 1);
         Lua _lua;
         LuaThread _ironMarioThread;
 
@@ -213,7 +215,7 @@ namespace LuaEmuPlayer.Models
         {
             Form form = Dispatcher.UIThread.Invoke(() =>
             {
-                Form form = new(height, height, title, () => onClose.Call());
+                Form form = new(height, height, title, async () => await RunUIBlock(onClose));
                 form.Show();
                 return form;
             });
@@ -221,15 +223,20 @@ namespace LuaEmuPlayer.Models
             return _formControls.Register(form);
         }
 
-        bool FormDestroy(long handle)
+        bool FormDestroy(long? handle)
         {
-            var form = _formControls.Get(handle) as Form;
+            if (handle is null)
+            {
+                return false;
+            }
+
+            var form = _formControls.Get(handle.Value) as Form;
             if (form is null)
             {
                 return false;
             }
 
-            Dispatcher.UIThread.InvokeAsync(() => form.Close());
+            Dispatcher.UIThread.Invoke(() => form.Close());
             return true;
         }
 
@@ -275,7 +282,7 @@ namespace LuaEmuPlayer.Models
                         Dispatcher.UIThread.Invoke(() => checkbox.IsChecked = (bool)value).ToString();
                     }
                     break;
-                case "SelectedItem":;
+                case "SelectedItem":
                     if (control is ComboBox dropdown)
                     {
                         Dispatcher.UIThread.Invoke(() => dropdown.SelectedItem = value).ToString();
@@ -333,8 +340,20 @@ namespace LuaEmuPlayer.Models
             var form = _formControls.Get(handle) as Form;
             return Dispatcher.UIThread.Invoke(() =>
             {
-                return _formControls.Register(form.AddButton(x, y, width, height, caption, () => onClick.Call()));
+                return _formControls.Register(form.AddButton(x, y, width, height, caption, async () => await RunUIBlock(onClick)));
             });
+        }
+
+        bool FormIsChecked(long handle)
+        {
+            var checkbox = _formControls.Get(handle) as CheckBox;
+            if (checkbox is null)
+            {
+                return false;
+            }
+
+            bool result = Dispatcher.UIThread.Invoke(() => checkbox.IsChecked ?? false);
+            return result;
         }
 
         LuaFunction openIronMario()
@@ -386,13 +405,14 @@ namespace LuaEmuPlayer.Models
 
             _lua.NewTable("forms");
             _lua["forms.newform"] = new Func<int, int, string, LuaFunction, long>(NewForm);
-            _lua["forms.destroy"] = new Func<long, bool>(FormDestroy);
+            _lua["forms.destroy"] = new Func<long?, bool>(FormDestroy);
             _lua["forms.getproperty"] = new Func<long, string, string>(FormGetProperty);
             _lua["forms.setproperty"] = new Action<long, string, object>(FormSetProperty);
             _lua["forms.label"] = new Func<long, string, int, int, int, int, long>(FormLabel);
             _lua["forms.dropdown"] = new Func<long, LuaTable, int, int, int, int, long>(FormDropdown);
             _lua["forms.checkbox"] = new Func<long, string, int, int, long>(FormCheckbox);
             _lua["forms.button"] = new Func<long, string, LuaFunction, int, int, int, int, long>(FormButton);
+            _lua["forms.ischecked"] = new Func<long, bool>(FormIsChecked);
 
             return _lua.LoadFile("IronMarioTracker.lua");
         }
@@ -434,6 +454,7 @@ namespace LuaEmuPlayer.Models
             {
                 _frameCount++;
                 var residue = _gui.CheckHeight(_getWindowHeight(), _getWindowWidth());
+                await _semaphore.WaitAsync();
                 try
                 {
                     delayMs = 1000;
@@ -473,6 +494,7 @@ namespace LuaEmuPlayer.Models
                 }
                 finally
                 {
+                    _semaphore.Release();
                     var present = _gui.SwapBuffers();
                     if (present is not null || residue is not null)
                     {
@@ -484,6 +506,29 @@ namespace LuaEmuPlayer.Models
                     }
                     await Task.Delay(delayMs);
                 }
+            }
+        }
+
+        async Task RunUIBlock(LuaFunction func)
+        {
+            await _semaphore.WaitAsync();
+            try
+            {
+                _lua.NewThread(func, out var thread);
+                thread.Resume();
+                thread.Dispose();
+            }
+            catch (LuaScriptException e)
+            {
+                _error(e.Message);
+            }
+            catch (Exception e)
+            {
+                _error(e.Message);
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
     }
