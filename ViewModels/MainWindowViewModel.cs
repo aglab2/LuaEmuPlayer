@@ -90,7 +90,7 @@ namespace LuaEmuPlayer.ViewModels
 
         public MainWindowViewModel()
         {
-            _player = new(OnEmuStateChange, OnError, OnGetWindowWidth, OnGetWindowHeight, OnGetMouseInputs, OnPresent);
+            _player = new(OnEmuStateChange, OnError, OnGetWindowWidth, OnGetWindowHeight, OnGetMouseInputs, OnPresent, null);
         }
 
         void OnEmuStateChange(Player.State state)

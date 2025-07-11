@@ -37,7 +37,7 @@ namespace LuaEmuPlayer.Models
             });
         }
 
-        public long Form(int width, int height, string title, Callback onClose)
+        public long Form(int width, int height, string title, Callback onClose, object _)
         {
             Form form = Dispatcher.UIThread.Invoke(() =>
             {
