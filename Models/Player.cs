@@ -1,5 +1,4 @@
-﻿using Avalonia.Media.Imaging;
-using NLua;
+﻿using NLua;
 using NLua.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -8,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static LuaEmuPlayer.Models.Emulator;
+using LuaEmuPlayer.ViewModels;
 
 namespace LuaEmuPlayer.Models
 {
@@ -20,7 +20,7 @@ namespace LuaEmuPlayer.Models
             var oldCoTop = thr.State.GetTop();
 
             var ret = thr.State.Resume(null, 0);
-            if (ret is KeraLua.LuaStatus.OK or KeraLua.LuaStatus.Yield)
+            if (ret == KeraLua.LuaStatus.OK || ret == KeraLua.LuaStatus.Yield)
             {
                 return;
             }
@@ -54,8 +54,10 @@ namespace LuaEmuPlayer.Models
         readonly GetWindowInfo _getWindowHeight;
         readonly GetWindowInfo _getWindowWidth;
 
-        public delegate void PresentDelegate(WriteableBitmap bitmap);
+        public delegate void PresentDelegate(Frame frame);
         readonly PresentDelegate _present;
+
+        readonly object _uiDispatcher;
 
         public struct MouseInputs
         {
@@ -66,11 +68,11 @@ namespace LuaEmuPlayer.Models
         public delegate MouseInputs GetMouseInputs();
         readonly GetMouseInputs _getMouseInputs;
 
-        readonly Emulator _emulator = new();
-        readonly GUI _gui = new();
-        readonly Forms _forms = new();
+        readonly Emulator _emulator = new Emulator();
+        readonly GUI _gui = new GUI();
+        readonly Forms _forms = new Forms();
 
-        SemaphoreSlim _semaphore = new(1, 1);
+        SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         Lua _lua;
         LuaThread _ironMarioThread;
 
@@ -176,7 +178,7 @@ namespace LuaEmuPlayer.Models
 
         long NewForm(int width, int height, string title, LuaFunction onClose)
         {
-            return _forms.Form(width, height, title, async () => await RunUIBlock(onClose));
+            return _forms.Form(width, height, title, async () => await RunUIBlock(onClose), _uiDispatcher);
         }
 
         bool FormDestroy(long? handle)
@@ -297,7 +299,7 @@ namespace LuaEmuPlayer.Models
             return _lua.LoadFile("IronMarioTracker.lua");
         }
 
-        public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs, PresentDelegate present)
+        public Player(EmuStateChangeDelegate emuStateChange, ErrorDelegate error, GetWindowInfo width, GetWindowInfo height, GetMouseInputs getMouseInputs, PresentDelegate present, object uiDispatcher)
         {
             _emuStateChange = emuStateChange;
             _error = error;
@@ -305,6 +307,7 @@ namespace LuaEmuPlayer.Models
             _getWindowWidth = width;
             _getMouseInputs = getMouseInputs;
             _present = present;
+            _uiDispatcher = uiDispatcher;
 
             Task.Run(Scan);
         }
@@ -376,11 +379,11 @@ namespace LuaEmuPlayer.Models
                 {
                     _semaphore.Release();
                     var present = _gui.SwapBuffers();
-                    if (present is not null || residue is not null)
+                    if (!(present is null) || !(residue is null))
                     {
                         _present(present);
                     }
-                    if (residue is not null)
+                    if (!(residue is null))
                     {
                         residue.Dispose();
                     }

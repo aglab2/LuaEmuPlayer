@@ -3,6 +3,7 @@ using Avalonia.Platform;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using LuaEmuPlayer.ViewModels;
 
 namespace LuaEmuPlayer.Models
 {
@@ -23,7 +24,7 @@ namespace LuaEmuPlayer.Models
         public int Width { get => _skiaImageInfo.Width; }
         public int Height { get => _skiaImageInfo.Height; }
 
-        public WriteableBitmap SwapBuffers()
+        public Frame SwapBuffers()
         {
             if (!StopRender())
             {
@@ -33,7 +34,7 @@ namespace LuaEmuPlayer.Models
             WriteableBitmap present = _back;
             _back = _front;
             _front = present;
-            return present;
+            return new Frame(present);
         }
 
         void StartRender()

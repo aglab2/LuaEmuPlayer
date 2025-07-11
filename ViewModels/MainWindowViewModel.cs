@@ -147,11 +147,11 @@ namespace LuaEmuPlayer.ViewModels
             return new Player.MouseInputs() { left = _mouse.left, x = _mouse.x, y = _mouse.y };
         }
 
-        void OnPresent(WriteableBitmap bitmap)
+        void OnPresent(Frame frame)
         {
             Dispatcher.UIThread.Invoke(() =>
             {
-                Render = bitmap;
+                Render = frame.Bitmap;
             });
         }
     }
