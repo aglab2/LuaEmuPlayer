@@ -141,6 +141,11 @@ namespace LuaEmuPlayer.Models
 
         Color? ToColor(string name)
         {
+            if (name is null)
+            {
+                return null;
+            }
+
             try
             {
                 return ColorTranslator.FromHtml(name);
@@ -181,7 +186,7 @@ namespace LuaEmuPlayer.Models
             var h = y2 - y;
             StartRender();
             var lineColor = ToColor(line) ?? Color.White;
-            using (var pen = new Pen(lineColor))
+            using (var pen = new Pen(lineColor, 1))
             {
                 _graphics.DrawRectangle(pen, x, y, w, h);
             }
