@@ -141,37 +141,14 @@ namespace LuaEmuPlayer.Models
 
         Color? ToColor(string name)
         {
-            if (name is null)
+            try
+            {
+                return ColorTranslator.FromHtml(name);
+            }
+            catch
             {
                 return null;
             }
-
-            if (name == "red")
-            {
-                return Color.Red;
-            }
-            if (name == "lightblue")
-            {
-                return Color.LightBlue;
-            }
-            if (name == "lightgreen")
-            {
-                return Color.LightGreen;
-            }
-            if (name == "orange")
-            {
-                return Color.Orange;
-            }
-            if (name == "yellow")
-            {
-                return Color.Yellow;
-            }
-            if (name == "gray")
-            {
-                return Color.Gray;
-            }
-
-            return null;
         }
 
         public int DrawString(int x, int y, string message, string foreColor, string backColor, int? fontSizez, string fontFamily, string fontStyle, string horizAlign, string vertAlign)
@@ -198,7 +175,25 @@ namespace LuaEmuPlayer.Models
             return 0;
         }
 
-        public class Residue
+        public void DrawBox(int x, int y, int x2, int y2, string line, string background)
+        {
+            var w = x2 - x;
+            var h = y2 - y;
+            StartRender();
+            var lineColor = ToColor(line) ?? Color.White;
+            using (var pen = new Pen(lineColor))
+            {
+                _graphics.DrawRectangle(pen, x, y, w, h);
+            }
+
+            var backgroundColor = ToColor(background) ?? Color.Black;
+            using (var brush = new SolidBrush(backgroundColor))
+            {
+                _graphics.FillRectangle(brush, x + 1, y + 1, w - 2, h - 2);
+            }
+        }
+
+    public class Residue
         {
             public Bitmap back;
             public Bitmap front;

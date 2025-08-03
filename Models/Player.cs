@@ -1,13 +1,14 @@
-﻿using NLua;
+﻿using LuaEmuPlayer.ViewModels;
+using NLua;
 using NLua.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static LuaEmuPlayer.Models.Emulator;
-using LuaEmuPlayer.ViewModels;
 
 namespace LuaEmuPlayer.Models
 {
@@ -164,16 +165,19 @@ namespace LuaEmuPlayer.Models
             return mouse;
         }
 
-        int DrawImage(string path, int x, int y, int width, int height)
+        void DrawImage(string path, int x, int y, int width, int height)
         {
             _gui.DrawImage(path, x - GetWindowWidth(), y, width, height);
-            return 0;
         }
 
-        int DrawString(int x, int y, string message, string foreColor = null, string backColor = null, int? fontSize = null, string fontFamily = null, string fontStyle = null, string horizAlign = null, string vertAlign = null)
+        void DrawString(int x, int y, string message, string foreColor = null, string backColor = null, int? fontSize = null, string fontFamily = null, string fontStyle = null, string horizAlign = null, string vertAlign = null)
         {
             _gui.DrawString(x - GetWindowWidth(), y, message, foreColor, backColor, fontSize, fontFamily, fontStyle, horizAlign, vertAlign);
-            return 0;
+        }
+
+        void DrawBox(int x, int y, int x2, int y2, string line = null, string background = null)
+        {
+            _gui.DrawBox(x, y, x2, y2, line, background);
         }
 
         long NewForm(int width, int height, string title, LuaFunction onClose)
@@ -268,6 +272,7 @@ namespace LuaEmuPlayer.Models
             _lua["memory.read_u16_be"] = new Func<uint, ushort>(EmuReadUShortBE);
             _lua["memory.read_u32_be"] = new Func<uint, uint>(EmuReadUIntBE);
             _lua["memory.readbyte"] = new Func<uint, byte>(EmuReadByte);
+            _lua["memory.read_u8"] = new Func<uint, byte>(EmuReadByte);
 
             _lua.NewTable("joypad");
             _lua["joypad.get"] = new Func<Dictionary<string, bool>>(ReadJoyPad);
@@ -282,8 +287,9 @@ namespace LuaEmuPlayer.Models
             _lua["input.getmouse"] = new Func<LuaTable>(GetMouse);
 
             _lua.NewTable("gui");
-            _lua["gui.drawImage"] = new Func<string, int, int, int, int, int>(DrawImage);
-            _lua["gui.drawString"] = new Func<int, int, string, string, string, int?, string, string, string, string, int>(DrawString);
+            _lua["gui.drawImage"] = new Action<string, int, int, int, int>(DrawImage);
+            _lua["gui.drawString"] = new Action<int, int, string, string, string, int?, string, string, string, string>(DrawString);
+            _lua["gui.drawBox"] = new Action<int, int, int, int, string, string> (DrawBox);
 
             _lua.NewTable("forms");
             _lua["forms.newform"] = new Func<int, int, string, LuaFunction, long>(NewForm);
