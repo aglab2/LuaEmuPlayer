@@ -151,7 +151,14 @@ namespace LuaEmuPlayer.ViewModels
         {
             Dispatcher.UIThread.Invoke(() =>
             {
-                Render = frame.Bitmap;
+                if (frame is null)
+                {
+                    Render = null;
+                }
+                else
+                {
+                    Render = frame.Bitmap;
+                }
             });
         }
     }

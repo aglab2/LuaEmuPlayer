@@ -1,9 +1,10 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using LuaEmuPlayer.ViewModels;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using LuaEmuPlayer.ViewModels;
 
 namespace LuaEmuPlayer.Models
 {
@@ -168,6 +169,24 @@ namespace LuaEmuPlayer.Models
             {
                 return new SKColor(0xa0, 0xa0, 0xa0);
             }
+            if (name == "black")
+            {
+                return new SKColor(0x00, 0x00, 0x00);
+            }
+            if (name == "white")
+            {
+                return new SKColor(0xff, 0xff, 0xff);
+            }
+            if (name[0] == '#')
+            {
+                if (name.Length == 7)
+                {
+                    return new SKColor(
+                        Convert.ToByte(name.Substring(1, 2), 16),
+                        Convert.ToByte(name.Substring(3, 2), 16),
+                        Convert.ToByte(name.Substring(5, 2), 16));
+                }
+            }
 
             return null;
         }
@@ -198,6 +217,17 @@ namespace LuaEmuPlayer.Models
                 _skiaCanvas.DrawText(message, x, y + fontSize / 1.3f, font, paint);
             }
             return 0;
+        }
+
+        public void DrawBox(int x, int y, int x2, int y2, string line, string background)
+        {
+            var w = x2 - x;
+            var h = y2 - y;
+            StartRender();
+            var lineColor = ToSKColor(line) ?? new SKColor(0xff, 0xff, 0xff);
+            _skiaCanvas.DrawRect(new SKRect(x, y, x + w, y + h), new SKPaint { Color = lineColor, Style = SKPaintStyle.Stroke });
+            var backgroundColor = ToSKColor(background) ?? new SKColor(0, 0, 0);
+            _skiaCanvas.DrawRect(new SKRect(x + 1, y + 1, x + w - 1, y + h - 1), new SKPaint { Color = backgroundColor, Style = SKPaintStyle.Fill });
         }
 
         public class Residue

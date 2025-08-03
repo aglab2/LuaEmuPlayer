@@ -177,7 +177,7 @@ namespace LuaEmuPlayer.Models
 
         void DrawBox(int x, int y, int x2, int y2, string line = null, string background = null)
         {
-            _gui.DrawBox(x, y, x2, y2, line, background);
+            _gui.DrawBox(x - GetWindowWidth(), y, x2 - GetWindowWidth(), y2, line, background);
         }
 
         long NewForm(int width, int height, string title, LuaFunction onClose)
